@@ -222,6 +222,80 @@
             background: #fff3cd;
         }
 
+        .exception-container {
+            margin-top: 12px;
+            padding: 12px;
+            background: #fff8e1;
+            border: 1px solid #ffca28;
+            border-radius: 6px;
+            display: none;
+        }
+
+        .exception-container.show {
+            display: block;
+        }
+
+        .exception-toggle {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 10px;
+            cursor: pointer;
+        }
+
+        .exception-toggle input[type="checkbox"] {
+            width: auto;
+            margin: 0;
+        }
+
+        .exception-toggle label {
+            margin: 0;
+            font-weight: 500;
+            color: #f57c00;
+            cursor: pointer;
+            font-size: 0.9rem;
+        }
+
+        .exception-rationale {
+            width: 100%;
+            min-height: 80px;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 0.85rem;
+            resize: vertical;
+            font-family: inherit;
+        }
+
+        .exception-rationale:focus {
+            outline: none;
+            border-color: #ffc107;
+            box-shadow: 0 0 0 2px rgba(255, 193, 7, 0.2);
+        }
+
+        .exception-help {
+            font-size: 0.75rem;
+            color: #666;
+            margin-top: 6px;
+            line-height: 1.3;
+        }
+
+        .exception-help .required-phrases {
+            font-weight: 500;
+            color: #f57c00;
+        }
+
+        .form-group input.warning,
+        .form-group select.warning {
+            border-color: #ffc107;
+            box-shadow: 0 0 0 2px rgba(255, 193, 7, 0.1);
+        }
+
+        .validation-message.warning {
+            color: #f57c00;
+            font-weight: 500;
+        }
+
         .toggle-container {
             display: flex;
             align-items: center;
@@ -396,6 +470,17 @@
                         <label for="dateOfBirth">Date of Birth *</label>
                         <input type="date" id="dateOfBirth" name="dateOfBirth" required>
                         <div class="validation-message" id="dateOfBirthError"></div>
+                        <div class="exception-container" id="dateOfBirthException">
+                            <div class="exception-toggle">
+                                <input type="checkbox" id="dateOfBirthExceptionToggle">
+                                <label for="dateOfBirthExceptionToggle">Request Exception</label>
+                            </div>
+                            <textarea class="exception-rationale" id="dateOfBirthRationale" placeholder="Provide justification for exception..."></textarea>
+                            <div class="exception-help">
+                                Minimum 30 characters. Must include one of: <span class="required-phrases">"approved by", "special case", "documentation pending", or "waiver granted"</span>
+                            </div>
+                            <div class="validation-message" id="dateOfBirthRationaleError"></div>
+                        </div>
                     </div>
                 </div>
 
@@ -421,6 +506,17 @@
                         <label for="graduationYear">Graduation Year *</label>
                         <input type="number" id="graduationYear" name="graduationYear" placeholder="2023" min="2015" max="2025" required>
                         <div class="validation-message" id="graduationYearError"></div>
+                        <div class="exception-container" id="graduationYearException">
+                            <div class="exception-toggle">
+                                <input type="checkbox" id="graduationYearExceptionToggle">
+                                <label for="graduationYearExceptionToggle">Request Exception</label>
+                            </div>
+                            <textarea class="exception-rationale" id="graduationYearRationale" placeholder="Provide justification for exception..."></textarea>
+                            <div class="exception-help">
+                                Minimum 30 characters. Must include one of: <span class="required-phrases">"approved by", "special case", "documentation pending", or "waiver granted"</span>
+                            </div>
+                            <div class="validation-message" id="graduationYearRationaleError"></div>
+                        </div>
                     </div>
 
                     <div class="form-group">
@@ -434,12 +530,34 @@
                         <label for="percentageCgpa">Percentage / CGPA *</label>
                         <input type="text" id="percentageCgpa" name="percentageCgpa" placeholder="72.5" required>
                         <div class="validation-message" id="percentageCgpaError"></div>
+                        <div class="exception-container" id="percentageCgpaException">
+                            <div class="exception-toggle">
+                                <input type="checkbox" id="percentageCgpaExceptionToggle">
+                                <label for="percentageCgpaExceptionToggle">Request Exception</label>
+                            </div>
+                            <textarea class="exception-rationale" id="percentageCgpaRationale" placeholder="Provide justification for exception..."></textarea>
+                            <div class="exception-help">
+                                Minimum 30 characters. Must include one of: <span class="required-phrases">"approved by", "special case", "documentation pending", or "waiver granted"</span>
+                            </div>
+                            <div class="validation-message" id="percentageCgpaRationaleError"></div>
+                        </div>
                     </div>
 
                     <div class="form-group">
                         <label for="screeningScore">Screening Test Score *</label>
                         <input type="number" id="screeningScore" name="screeningScore" placeholder="65" min="0" max="100" required>
                         <div class="validation-message" id="screeningScoreError"></div>
+                        <div class="exception-container" id="screeningScoreException">
+                            <div class="exception-toggle">
+                                <input type="checkbox" id="screeningScoreExceptionToggle">
+                                <label for="screeningScoreExceptionToggle">Request Exception</label>
+                            </div>
+                            <textarea class="exception-rationale" id="screeningScoreRationale" placeholder="Provide justification for exception..."></textarea>
+                            <div class="exception-help">
+                                Minimum 30 characters. Must include one of: <span class="required-phrases">"approved by", "special case", "documentation pending", or "waiver granted"</span>
+                            </div>
+                            <div class="validation-message" id="screeningScoreRationaleError"></div>
+                        </div>
                     </div>
                 </div>
 
@@ -598,7 +716,37 @@
 
         // State management
         let validationState = {};
-        let exceptionRationales = {};
+        let exceptionState = {
+            dateOfBirth: { enabled: false, rationale: '' },
+            graduationYear: { enabled: false, rationale: '' },
+            percentageCgpa: { enabled: false, rationale: '' },
+            screeningScore: { enabled: false, rationale: '' }
+        };
+
+        // Exception validation function
+        function validateExceptionRationale(rationale) {
+            const trimmedRationale = rationale.trim();
+            
+            // Check minimum length
+            if (trimmedRationale.length < 30) {
+                return { isValid: false, errorMessage: 'Rationale must be at least 30 characters long.' };
+            }
+            
+            // Check for required phrases
+            const requiredPhrases = ['approved by', 'special case', 'documentation pending', 'waiver granted'];
+            const hasRequiredPhrase = requiredPhrases.some(phrase => 
+                trimmedRationale.toLowerCase().includes(phrase.toLowerCase())
+            );
+            
+            if (!hasRequiredPhrase) {
+                return { 
+                    isValid: false, 
+                    errorMessage: 'Rationale must include one of: "approved by", "special case", "documentation pending", or "waiver granted"' 
+                };
+            }
+            
+            return { isValid: true, errorMessage: '' };
+        }
 
         // Toggle functionality for Percentage/CGPA
         let isPercentageMode = true;
@@ -628,6 +776,10 @@
             const field = document.getElementById(fieldName);
             const errorElement = document.getElementById(fieldName + 'Error');
             const rule = validationRules[fieldName];
+            const exceptionContainer = document.getElementById(fieldName + 'Exception');
+            const exceptionToggle = document.getElementById(fieldName + 'ExceptionToggle');
+            const rationaleElement = document.getElementById(fieldName + 'Rationale');
+            const rationaleErrorElement = document.getElementById(fieldName + 'RationaleError');
             
             if (!field || !rule) return true;
 
@@ -689,17 +841,44 @@
                 }
             }
 
-            // Check for exception rationale for soft rules
+            // Handle soft rule exceptions
             if (!isValid && isWarning && rule.exceptionAllowed) {
-                const rationale = exceptionRationales[fieldName] || '';
-                const hasValidRationale = rule.rationaleKeywords.some(keyword => 
-                    rationale.toLowerCase().includes(keyword.toLowerCase())
-                );
+                // Show exception container for soft rule violations
+                if (exceptionContainer) {
+                    exceptionContainer.classList.add('show');
+                }
                 
-                if (hasValidRationale) {
-                    isValid = true;
-                    errorMessage = '';
-                    isWarning = false;
+                // Check if exception is enabled and valid
+                if (exceptionState[fieldName].enabled) {
+                    const rationaleValidation = validateExceptionRationale(exceptionState[fieldName].rationale);
+                    
+                    if (rationaleValidation.isValid) {
+                        isValid = true;
+                        errorMessage = '';
+                        isWarning = false;
+                        
+                        // Update rationale error message
+                        if (rationaleErrorElement) {
+                            rationaleErrorElement.textContent = '✓ Exception approved';
+                            rationaleErrorElement.className = 'validation-message success';
+                        }
+                    } else {
+                        // Show rationale error
+                        if (rationaleErrorElement) {
+                            rationaleErrorElement.textContent = rationaleValidation.errorMessage;
+                            rationaleErrorElement.className = 'validation-message error';
+                        }
+                    }
+                } else {
+                    // Clear rationale error when exception is not enabled
+                    if (rationaleErrorElement) {
+                        rationaleErrorElement.textContent = '';
+                    }
+                }
+            } else {
+                // Hide exception container for valid fields or strict rule violations
+                if (exceptionContainer && !isWarning) {
+                    exceptionContainer.classList.remove('show');
                 }
             }
 
@@ -758,7 +937,20 @@
             Object.keys(validationState).forEach(fieldName => {
                 const state = validationState[fieldName];
                 if (!state.isValid && state.errorMessage) {
-                    errors.push(state.errorMessage);
+                    // For soft rules, only show error if exception is not properly enabled
+                    const rule = validationRules[fieldName];
+                    if (rule.type === 'soft' && rule.exceptionAllowed) {
+                        if (!exceptionState[fieldName].enabled) {
+                            errors.push(state.errorMessage + ' (Request exception or fix the issue)');
+                        } else {
+                            const rationaleValidation = validateExceptionRationale(exceptionState[fieldName].rationale);
+                            if (!rationaleValidation.isValid) {
+                                errors.push(rationaleValidation.errorMessage);
+                            }
+                        }
+                    } else {
+                        errors.push(state.errorMessage);
+                    }
                 }
             });
 
@@ -794,7 +986,28 @@
                 }
             });
 
-            submitBtn.disabled = !allStrictValid;
+            // Check soft rules and exceptions
+            let allSoftValid = true;
+            Object.keys(validationRules).forEach(fieldName => {
+                const rule = validationRules[fieldName];
+                const state = validationState[fieldName];
+                
+                if (rule.type === 'soft' && rule.exceptionAllowed) {
+                    if (!state.isValid) {
+                        // Check if exception is properly enabled and valid
+                        if (!exceptionState[fieldName].enabled) {
+                            allSoftValid = false;
+                        } else {
+                            const rationaleValidation = validateExceptionRationale(exceptionState[fieldName].rationale);
+                            if (!rationaleValidation.isValid) {
+                                allSoftValid = false;
+                            }
+                        }
+                    }
+                }
+            });
+
+            submitBtn.disabled = !(allStrictValid && allSoftValid);
         }
 
         function updateProgress() {
@@ -838,6 +1051,30 @@
 
                 // Validate on blur
                 field.addEventListener('blur', () => {
+                    validateField(fieldName);
+                    updateErrorBanner();
+                });
+            }
+        });
+
+        // Add event listeners for exception toggles and rationales
+        const softRuleFields = ['dateOfBirth', 'graduationYear', 'percentageCgpa', 'screeningScore'];
+        
+        softRuleFields.forEach(fieldName => {
+            const exceptionToggle = document.getElementById(fieldName + 'ExceptionToggle');
+            const rationaleElement = document.getElementById(fieldName + 'Rationale');
+            
+            if (exceptionToggle) {
+                exceptionToggle.addEventListener('change', function() {
+                    exceptionState[fieldName].enabled = this.checked;
+                    validateField(fieldName);
+                    updateErrorBanner();
+                });
+            }
+            
+            if (rationaleElement) {
+                rationaleElement.addEventListener('input', function() {
+                    exceptionState[fieldName].rationale = this.value;
                     validateField(fieldName);
                     updateErrorBanner();
                 });
