@@ -1,0 +1,105 @@
+---
+config:
+  layout: elk
+---
+flowchart TD
+
+    A(["`**APP ENTRY**
+    ─────────────
+    Open Application`"])
+
+    subgraph FORM["📋 ENTRY FORM  (FR-1, FR-2)"]
+        direction TB
+        F1["`**Aadhaar / Email Field**
+        ─────────────────────
+        · Input text field
+        · Border → 🟢 green if valid
+        · Border → 🔴 red if invalid`"]
+
+        F2["`**GPA / Other Soft-Rule Fields**
+        ─────────────────────────────
+        · Input text field
+        · Threshold checked in real-time`"]
+
+        F3["`**Submit Button**
+        ──────────────
+        · Disabled while errors exist
+        · Enabled only when all rules pass`"]
+    end
+
+    subgraph BLOCK["🚫 STRICT RULE BLOCKER  (FR-3)"]
+        direction TB
+        B1["`**Inline Error Message**
+        ──────────────────────
+        · 'Invalid Aadhaar format'
+        · Shown below offending field
+        · Submit remains LOCKED`"]
+    end
+
+    subgraph EXCEPTION["⚠️ EXCEPTION WORKFLOW  (FR-4, FR-5)"]
+        direction TB
+        E1["`**Warning Card**
+        ───────────────
+        · Appears on soft-rule violation
+        · Describes the threshold breach`"]
+
+        E2["`**Exception Toggle**
+        ──────────────────
+        · Must be flipped ON to proceed`"]
+
+        E3["`**Rationale Box**
+        ─────────────────
+        · Expands when toggle is ON
+        · Min 30 characters required
+        · Keyword check: 'experience'
+          'certification', 'referral'`"]
+    end
+
+    subgraph SUBMIT["✅ SUBMISSION & GUARDRAILS  (FR-6, FR-7)"]
+        direction TB
+        S1["`**Exception Count Logic**
+        ────────────────────────
+        · Count all active exceptions
+        · If count > 2 → add tag:
+          flagged_for_review: true`"]
+
+        S2["`**Summary Modal**
+        ─────────────────
+        · Form clears on success
+        · Modal shows:
+          - All captured fields
+          - Exception list (if any)
+          - Flagged status badge`"]
+    end
+
+    subgraph ADMIN["🛡️ ADMIN DASHBOARD  (FR-9, FR-10, FR-11)"]
+        direction TB
+        D1["`**Analytics Panel**
+        ──────────────────
+        · Exception Rate stat
+          e.g. '25% needed GPA override'
+        · Visual indicator / progress bar`"]
+
+        D2["`**Audit Log**
+        ─────────────
+        · List of all submissions
+        · Each entry shows:
+          - Candidate ID
+          - Submission date
+          - Exception count
+          - 🟡 Amber highlight if flagged`"]
+
+        D3["`**Export Button**
+        ─────────────────
+        · One-click CSV export
+        · Full log for HR tools`"]
+    end
+
+    A --> FORM
+    F1 -->|Strict rule violated| BLOCK
+    BLOCK -->|User corrects input| F1
+    F2 -->|Soft rule violated| EXCEPTION
+    E3 -->|Rationale valid + keywords found| F3
+    F2 -->|No violation| F3
+    F3 -->|User clicks Submit| SUBMIT
+    S2 -->|Manager view| ADMIN

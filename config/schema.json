@@ -1,0 +1,122 @@
+{
+  "rules": [
+    {
+      "field": "full_name",
+      "label": "Full Name",
+      "inputType": "text",
+      "type": "strict",
+      "validation": "^[a-zA-Z\\s]{2,}$",
+      "errorMessage": "Name must be at least 2 characters with no numbers.",
+      "exceptionAllowed": false,
+      "rationaleKeywords": []
+    },
+    {
+      "field": "email",
+      "label": "Email Address",
+      "inputType": "email",
+      "type": "strict",
+      "validation": "^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$",
+      "errorMessage": "Valid and unique email format required.",
+      "exceptionAllowed": false,
+      "rationaleKeywords": []
+    },
+    {
+      "field": "phone",
+      "label": "Phone Number",
+      "inputType": "tel",
+      "type": "strict",
+      "validation": "^[6-9]\\d{9}$",
+      "errorMessage": "Must be a 10-digit Indian mobile number starting with 6, 7, 8, or 9.",
+      "exceptionAllowed": false,
+      "rationaleKeywords": []
+    },
+    {
+      "field": "dob",
+      "label": "Date of Birth",
+      "inputType": "date",
+      "type": "soft",
+      "validation": "ageRange:18-35",
+      "errorMessage": "Candidate age must be between 18 and 35.",
+      "exceptionAllowed": true,
+      "rationaleKeywords": ["approved by", "special case", "documentation pending", "waiver granted"],
+      "hint": "Age must be between 18 and 35 years."
+    },
+    {
+      "field": "highest_qualification",
+      "label": "Highest Qualification",
+      "inputType": "select",
+      "options": ["", "B.Tech", "B.E.", "B.Sc", "BCA", "M.Tech", "M.Sc", "MCA", "MBA"],
+      "type": "strict",
+      "validation": "^(B\\.Tech|B\\.E\\.|B\\.Sc|BCA|M\\.Tech|M\\.Sc|MCA|MBA)$",
+      "errorMessage": "Must be a valid degree from the approved list.",
+      "exceptionAllowed": false,
+      "rationaleKeywords": []
+    },
+    {
+      "field": "graduation_year",
+      "label": "Graduation Year",
+      "inputType": "number",
+      "type": "soft",
+      "validation": "^(201[5-9]|202[0-5])$",
+      "errorMessage": "Graduation year must be between 2015 and 2025 (inclusive).",
+      "exceptionAllowed": true,
+      "rationaleKeywords": ["approved by", "special case", "documentation pending", "waiver granted"],
+      "hint": "Accepted range: 2015 to 2025."
+    },
+    {
+      "field": "percentage_cgpa",
+      "label": "Percentage / CGPA",
+      "inputType": "text",
+      "type": "soft",
+      "validation": "minPercentage:60,minCGPA:6.0",
+      "errorMessage": "Minimum 60% or 6.0 CGPA (10-point scale) required.",
+      "exceptionAllowed": true,
+      "rationaleKeywords": ["approved by", "special case", "documentation pending", "waiver granted"],
+      "hint": "Enter percentage (e.g. 72.5) or CGPA (e.g. 7.8). Values \u226510 are treated as percentage; values <10 as CGPA."
+    },
+    {
+      "field": "screening_test_score",
+      "label": "Screening Test Score",
+      "inputType": "number",
+      "type": "soft",
+      "validation": "screeningScore",
+      "errorMessage": "Screening score must be 40 or higher out of 100.",
+      "exceptionAllowed": true,
+      "rationaleKeywords": ["approved by", "special case", "documentation pending", "waiver granted"],
+      "hint": "Score out of 100. \u226560 = Cleared | 40\u201359 = Waitlisted | <40 = Rejected (requires override)."
+    },
+    {
+      "field": "interview_status",
+      "label": "Interview Status",
+      "inputType": "select",
+      "options": ["", "Cleared", "Waitlisted", "Rejected"],
+      "type": "strict",
+      "validation": "^(Cleared|Waitlisted|Rejected)$",
+      "errorMessage": "Status must be Cleared, Waitlisted, or Rejected.",
+      "exceptionAllowed": false,
+      "rationaleKeywords": []
+    },
+    {
+      "field": "aadhaar_number",
+      "label": "Aadhaar Number",
+      "inputType": "text",
+      "type": "strict",
+      "validation": "^\\d{12}$",
+      "errorMessage": "Aadhaar must be exactly 12 digits.",
+      "exceptionAllowed": false,
+      "rationaleKeywords": [],
+      "hint": "Enter your 12-digit Aadhaar number."
+    },
+    {
+      "field": "offer_letter_sent",
+      "label": "Offer Letter Sent",
+      "inputType": "select",
+      "options": ["", "Yes", "No"],
+      "type": "strict",
+      "validation": "^(Yes|No)$",
+      "errorMessage": "Must select Yes or No.",
+      "exceptionAllowed": false,
+      "rationaleKeywords": []
+    }
+  ]
+}
