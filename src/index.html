@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Candidate Admission Form</title>
+<title>admitGuard - Candidate Admission Form</title>
 <link rel="stylesheet" href="styles.css">
 </head>
 <body>
@@ -12,9 +12,14 @@
     <div class="tab-nav">
       <button class="tab-btn active" data-tab="form">Application Form</button>
       <button class="tab-btn" data-tab="audit">Audit Trail</button>
+      <div class="theme-toggle">
+        <button class="theme-btn" id="themeToggle" aria-label="Toggle dark mode">
+          <span class="theme-icon">🌙</span>
+        </button>
+      </div>
     </div>
-    <h1>Admission Form</h1>
-    <p>Complete your application for enrollment consideration</p>
+    <h1>admitGuard</h1>
+    <p>Admission Data Validation & Compliance System</p>
     <div class="progress-bar"><div class="progress-fill" id="pfill"></div></div>
   </header>
   <div class="tab-content">
@@ -46,7 +51,7 @@
 
     <div class="tab-pane" id="audit-tab">
       <div class="audit-header">
-        <h2>Audit Trail</h2>
+        <p>Audit Logs</p>
         <div class="audit-actions">
           <button class="sync-btn" id="syncBtn">Sync from File</button>
           <button class="download-btn" id="downloadBtn">Download JSON</button>
@@ -84,6 +89,35 @@
           </div>
         </div>
       </div>
+    </div>
+  </div>
+</div>
+
+<!-- Confirmation Modal -->
+<div class="modal-overlay" id="confirmModal">
+  <div class="modal-content">
+    <div class="modal-header">
+      <h2>Confirm admitGuard Submission</h2>
+      <p>Please review your application details before submitting</p>
+    </div>
+    
+    <div class="modal-body">
+      <div class="summary-grid" id="formSummary"></div>
+      
+      <div class="summary-section" id="exceptionsSection" style="display: none;">
+        <h3>Exceptions <span class="exception-count" id="exceptionBadge"></span></h3>
+        <div class="exceptions-list" id="exceptionsList"></div>
+      </div>
+      
+      <div class="summary-section flagged-warning" id="flaggedWarning" style="display: none;">
+        <div class="warning-icon">⚠️</div>
+        <p><strong>This application will be flagged for manager review</strong> due to multiple exceptions.</p>
+      </div>
+    </div>
+    
+    <div class="modal-footer">
+      <button type="button" class="btn-secondary" id="cancelBtn">Cancel</button>
+      <button type="button" class="btn-primary" id="confirmBtn">Confirm & Submit</button>
     </div>
   </div>
 </div>

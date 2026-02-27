@@ -253,9 +253,14 @@ function updateAuditDisplay() {
         </span>
       </td>
       <td>
-        <button class="action-btn" onclick="toggleAuditDetail('${entry.id}')">
-          View Details
-        </button>
+        <div class="action-buttons">
+          <button class="action-btn details-btn" onclick="toggleAuditDetail('${entry.id}')">
+            View Details
+          </button>
+          <button class="action-btn ${entry.flaggedForManager ? 'unflag-btn' : 'flag-btn'}" onclick="toggleFlagStatus('${entry.id}')">
+            ${entry.flaggedForManager ? 'Unflag' : 'Flag'}
+          </button>
+        </div>
       </td>
     `;
     tbody.appendChild(row);
@@ -290,6 +295,52 @@ function createDetailRow(entry) {
     `;
   }
   
+  // Format submission data in a user-friendly way
+  const formatSubmissionData = (payload) => {
+    const fieldOrder = [
+      'fullName', 'email', 'phone', 'aadhaarNumber',
+      'highestQualification', 'graduationYear', 'percentageCgpa', 'screeningScore',
+      'interviewStatus', 'offerLetterSent'
+    ];
+    
+    let html = '<div class="formatted-data">';
+    
+    fieldOrder.forEach(fieldKey => {
+      if (payload[fieldKey]) {
+        const fieldConfig = validationConfig.rules.find(rule => rule.field === fieldKey);
+        const label = fieldConfig ? fieldConfig.label : fieldKey.replace(/([A-Z])/g, ' $1').trim();
+        let value = payload[fieldKey];
+        
+        // Special handling for percentage/CGPA mode
+        if (fieldKey === 'percentageCgpa') {
+          // Try to determine mode from value or use default
+          const mode = parseFloat(value) > 10 ? 'Percentage (%)' : 'CGPA (10-point)';
+          value = `${value} (${mode})`;
+        }
+        
+        html += `
+          <div class="data-row">
+            <span class="data-label">${label}:</span>
+            <span class="data-value">${value}</span>
+          </div>
+        `;
+      }
+    });
+    
+    // Add flagged status if present
+    if (payload.flagged) {
+      html += `
+        <div class="data-row flagged">
+          <span class="data-label">Flagged for Review:</span>
+          <span class="data-value warning">Yes - ${payload.flagReason || 'Multiple exceptions'}</span>
+        </div>
+      `;
+    }
+    
+    html += '</div>';
+    return html;
+  };
+  
   row.innerHTML = `
     <td colspan="5">
       <div class="detail-section">
@@ -300,12 +351,19 @@ function createDetailRow(entry) {
           ${entry.payload.phone ? `<strong>Phone:</strong> ${entry.payload.phone}<br>` : ''}
           ${entry.payload.interviewStatus ? `<strong>Interview Status:</strong> ${entry.payload.interviewStatus}<br>` : ''}
           <strong>Flagged for Review:</strong> ${entry.flaggedForManager ? 'Yes' : 'No'}
+          ${entry.flaggedForManager && entry.flagReason ? `
+            <br><strong>Flag Reason:</strong> ${entry.flagReason}
+            <br><strong>Flagged By:</strong> ${entry.flaggedBy || 'Administrator'} on ${formatTimestamp(entry.flaggedAt)}
+          ` : ''}
+          ${entry.unflaggedAt ? `
+            <br><strong>Unflagged:</strong> Yes on ${formatTimestamp(entry.unflaggedAt)} by ${entry.unflaggedBy || 'Administrator'}
+          ` : ''}
         </div>
       </div>
       ${exceptionsHtml}
       <div class="detail-section">
         <div class="detail-title">Complete Submission Data</div>
-        <div class="json-view">${JSON.stringify(entry.payload, null, 2)}</div>
+        ${formatSubmissionData(entry.payload)}
       </div>
     </td>
   `;
@@ -318,6 +376,86 @@ function toggleAuditDetail(entryId) {
   if (detailRow) {
     detailRow.classList.toggle('show');
   }
+}
+
+function toggleFlagStatus(entryId) {
+  const entryIndex = auditLog.findIndex(entry => entry.id === entryId);
+  if (entryIndex === -1) return;
+  
+  const entry = auditLog[entryIndex];
+  const isCurrentlyFlagged = entry.flaggedForManager;
+  
+  if (isCurrentlyFlagged) {
+    // Unflag the candidate
+    if (confirm('Are you sure you want to unflag this candidate? This action will remove the manager review flag.')) {
+      entry.flaggedForManager = false;
+      entry.unflaggedAt = new Date().toISOString();
+      entry.unflaggedBy = 'Administrator';
+      
+      // Update the payload as well
+      if (entry.payload) {
+        entry.payload.flagged = false;
+        entry.payload.unflaggedAt = entry.unflaggedAt;
+        entry.payload.unflaggedBy = entry.unflaggedBy;
+      }
+      
+      showNotification('Candidate Unflagged', 'success');
+    }
+  } else {
+    // Flag the candidate
+    const reason = prompt('Please provide a reason for flagging this candidate for manager review:');
+    if (reason && reason.trim()) {
+      entry.flaggedForManager = true;
+      entry.flaggedAt = new Date().toISOString();
+      entry.flaggedBy = 'Administrator';
+      entry.flagReason = reason.trim();
+      
+      // Update the payload as well
+      if (entry.payload) {
+        entry.payload.flagged = true;
+        entry.payload.flaggedAt = entry.flaggedAt;
+        entry.payload.flaggedBy = entry.flaggedBy;
+        entry.payload.flagReason = entry.flagReason;
+      }
+      
+      showNotification('Candidate Flagged for Review', 'warning');
+    }
+  }
+  
+  // Save changes and update display
+  saveAuditLog();
+  updateAuditDisplay();
+  
+  console.log(`Candidate ${entryId} flag status updated: ${entry.flaggedForManager ? 'Flagged' : 'Unflagged'}`);
+}
+
+function showNotification(message, type = 'info') {
+  const syncBtn = document.getElementById('syncBtn');
+  if (!syncBtn) return;
+  
+  const originalText = syncBtn.textContent;
+  const originalBackground = syncBtn.style.background;
+  const originalColor = syncBtn.style.color;
+  
+  syncBtn.textContent = message;
+  
+  // Set colors based on type
+  if (type === 'success') {
+    syncBtn.style.background = '#e8f0ea';
+    syncBtn.style.color = '#2d5a3d';
+  } else if (type === 'warning') {
+    syncBtn.style.background = '#fff3cd';
+    syncBtn.style.color = '#856404';
+  } else {
+    syncBtn.style.background = '#d1ecf1';
+    syncBtn.style.color = '#0c5460';
+  }
+  
+  setTimeout(() => {
+    syncBtn.textContent = originalText;
+    syncBtn.style.background = originalBackground;
+    syncBtn.style.color = originalColor;
+  }, 2500);
 }
 
 function clearAuditLog() {
@@ -794,6 +932,39 @@ function bindFieldEvents() {
   });
 }
 
+// Theme Toggle Functions
+function initializeThemeToggle() {
+  const themeToggle = document.getElementById('themeToggle');
+  const themeIcon = document.querySelector('.theme-icon');
+  
+  // Load saved theme or default to light
+  const savedTheme = localStorage.getItem('admitguard-theme') || 'light';
+  setTheme(savedTheme);
+  
+  if (themeToggle) {
+    themeToggle.addEventListener('click', () => {
+      const currentTheme = document.documentElement.getAttribute('data-theme') || 'light';
+      const newTheme = currentTheme === 'light' ? 'dark' : 'light';
+      
+      setTheme(newTheme);
+      localStorage.setItem('admitguard-theme', newTheme);
+    });
+  }
+}
+
+function setTheme(theme) {
+  const themeIcon = document.querySelector('.theme-icon');
+  const html = document.documentElement;
+  
+  if (theme === 'dark') {
+    html.setAttribute('data-theme', 'dark');
+    if (themeIcon) themeIcon.textContent = '☀️';
+  } else {
+    html.removeAttribute('data-theme');
+    if (themeIcon) themeIcon.textContent = '🌙';
+  }
+}
+
 // Initialize the application
 document.addEventListener('DOMContentLoaded', async () => {
   await loadValidationConfig();
@@ -848,29 +1019,181 @@ document.addEventListener('DOMContentLoaded', async () => {
   // Initialize exception counter and progress
   updateExceptionCounter();
   updateProgress();
+  
+  // Initialize theme toggle
+  initializeThemeToggle();
 });
 
-// Submit
-document.addEventListener('submit', e => {
-  if (e.target.id !== 'theForm') return;
+// Confirmation Modal Functions
+function showConfirmationModal() {
+  const modal = document.getElementById('confirmModal');
+  populateSummaryData();
+  modal.classList.add('show');
   
-  console.log('🚀 Form submission triggered');
-  e.preventDefault();
-  Object.keys(fields).forEach(k => validate(k));
-  updateBanner();
+  // Add event listeners for buttons
+  const cancelBtn = document.getElementById('cancelBtn');
+  const confirmBtn = document.getElementById('confirmBtn');
   
-  const allOk = Object.keys(fields).every(k => state[k] === true);
-  const intStatusEl = document.getElementById('interviewStatus');
-  const intVal = intStatusEl ? intStatusEl.value : '';
+  // Remove existing listeners to prevent duplicates
+  cancelBtn.replaceWith(cancelBtn.cloneNode(true));
+  confirmBtn.replaceWith(confirmBtn.cloneNode(true));
   
-  console.log('Validation state:', { allOk, intVal, state });
+  // Add fresh listeners
+  document.getElementById('cancelBtn').addEventListener('click', hideConfirmationModal);
+  document.getElementById('confirmBtn').addEventListener('click', confirmSubmission);
   
-  if (!allOk || intVal === 'Rejected') {
-    console.log('❌ Submission blocked - validation failed');
-    return; // Don't submit if validation fails
+  // Close on overlay click
+  modal.addEventListener('click', (e) => {
+    if (e.target === modal) {
+      hideConfirmationModal();
+    }
+  });
+  
+  // Close on Escape key
+  document.addEventListener('keydown', handleEscapeKey);
+}
+
+function hideConfirmationModal() {
+  const modal = document.getElementById('confirmModal');
+  modal.classList.remove('show');
+  document.removeEventListener('keydown', handleEscapeKey);
+}
+
+function handleEscapeKey(e) {
+  if (e.key === 'Escape') {
+    hideConfirmationModal();
+  }
+}
+
+function populateSummaryData() {
+  const formData = {};
+  validationConfig.rules.forEach(rule => {
+    const el = document.getElementById(rule.field);
+    if (el) {
+      formData[rule.field] = el.value;
+    }
+  });
+  
+  // Unified Summary Section - Tabular Format
+  const formSummary = document.getElementById('formSummary');
+  formSummary.innerHTML = `
+    <table class="summary-table">
+      <thead>
+        <tr>
+          <th>Field</th>
+          <th>Value</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${generateSummaryTableRows(formData)}
+      </tbody>
+    </table>
+  `;
+  
+  // Exceptions Section
+  const exceptionsSection = document.getElementById('exceptionsSection');
+  const exceptionsList = document.getElementById('exceptionsList');
+  const exceptionBadge = document.getElementById('exceptionBadge');
+  
+  const activeExceptions = [];
+  Object.keys(exc).forEach(key => {
+    if (exc[key] && exc[key].text && exc[key].text.trim().length > 0) {
+      activeExceptions.push({
+        field: key,
+        rationale: exc[key].text.trim()
+      });
+    }
+  });
+  
+  if (activeExceptions.length > 0) {
+    exceptionsSection.style.display = 'block';
+    exceptionBadge.textContent = activeExceptions.length;
+    
+    exceptionsList.innerHTML = activeExceptions.map(exc => {
+      const fieldConfig = validationConfig.rules.find(rule => rule.field === exc.field);
+      const fieldLabel = fieldConfig ? fieldConfig.label : exc.field;
+      return `
+        <div class="exception-item">
+          <div class="exception-field">${fieldLabel}</div>
+          <div class="exception-rationale">${exc.rationale}</div>
+        </div>
+      `;
+    }).join('');
+  } else {
+    exceptionsSection.style.display = 'none';
   }
   
-  console.log('✅ Validation passed, proceeding with submission');
+  // Flagged Warning
+  const flaggedWarning = document.getElementById('flaggedWarning');
+  if (activeExceptions.length > 2) {
+    flaggedWarning.style.display = 'block';
+  } else {
+    flaggedWarning.style.display = 'none';
+  }
+}
+
+function generateSummaryTableRows(formData) {
+  // Add all fields in a logical order
+  const fieldOrder = [
+    'fullName', 'email', 'phone', 'aadhaarNumber',
+    'highestQualification', 'graduationYear', 'percentageCgpa', 'screeningScore',
+    'interviewStatus', 'offerLetterSent'
+  ];
+  
+  let rows = '';
+  
+  fieldOrder.forEach(fieldKey => {
+    if (formData[fieldKey]) {
+      const fieldConfig = validationConfig.rules.find(rule => rule.field === fieldKey);
+      const label = fieldConfig ? fieldConfig.label : fieldKey.replace(/([A-Z])/g, ' $1').trim();
+      
+      // Special handling for percentage/CGPA mode
+      let displayValue = formData[fieldKey];
+      if (fieldKey === 'percentageCgpa') {
+        const modeLabel = document.getElementById('modeLabel').textContent;
+        displayValue = `${formData[fieldKey]} (${modeLabel})`;
+      }
+      
+      rows += `
+        <tr>
+          <td class="summary-table-label">${label}</td>
+          <td class="summary-table-value">${displayValue}</td>
+        </tr>
+      `;
+    }
+  });
+  
+  // Add flagged status if present
+  if (formData.flagged) {
+    rows += `
+      <tr class="flagged-row">
+        <td class="summary-table-label">Flagged for Review</td>
+        <td class="summary-table-value warning">Yes - ${formData.flagReason || 'Multiple exceptions'}</td>
+      </tr>
+    `;
+  }
+  
+  return rows;
+}
+
+function createSummaryItem(label, value) {
+  return `
+    <div class="summary-item">
+      <span class="summary-label">${label}</span>
+      <span class="summary-value">${value}</span>
+    </div>
+  `;
+}
+
+function confirmSubmission() {
+  hideConfirmationModal();
+  
+  // Proceed with the actual submission
+  performSubmission();
+}
+
+function performSubmission() {
+  console.log('🚀 Form submission confirmed');
   
   // Prepare submission data using configuration
   const formData = {};
@@ -940,16 +1263,81 @@ document.addEventListener('submit', e => {
     list.innerHTML = '<li>✓ Application submitted successfully!</li>';
   }
   
-  // Reset form after 3 seconds
+  // Reset form immediately after successful submission
+  document.getElementById('theForm').reset();
+  
+  // Reset exception data and close all exception panels
+  Object.keys(exc).forEach(key => {
+    exc[key] = { text: '' };
+    const excPanel = document.getElementById(key + 'Exc');
+    if (excPanel) {
+      excPanel.classList.remove('show');
+    }
+    const excRatEl = document.getElementById(key + 'Rationale');
+    if (excRatEl) {
+      excRatEl.value = '';
+    }
+  });
+  
+  // Reset validation state
+  Object.keys(state).forEach(key => state[key] = false);
+  
+  // Reset mode toggle to Percentage mode
+  const modeToggle = document.getElementById('modeToggle');
+  const modeLabel = document.getElementById('modeLabel');
+  if (modeToggle && modeLabel) {
+    modeToggle.classList.add('on');
+    modeLabel.textContent = 'Percentage (%)';
+    document.getElementById('percentageCgpa').placeholder = '72.5';
+  }
+  
+  // Clear all field validation states
+  validationConfig.rules.forEach(rule => {
+    const el = document.getElementById(rule.field);
+    const hintEl = document.getElementById(rule.field + 'Hint');
+    if (el) {
+      el.classList.remove('err', 'warn');
+    }
+    if (hintEl) {
+      hintEl.className = 'hint';
+      hintEl.textContent = '';
+    }
+  });
+  
+  // Update UI components
+  updateBanner();
+  updateProgress();
+  updateExceptionCounter();
+  
+  // Reset banner after 3 seconds
   setTimeout(() => {
-    document.getElementById('theForm').reset();
-    Object.keys(exc).forEach(key => {
-      exc[key] = { text: '' };
-    });
-    Object.keys(state).forEach(key => state[key] = false);
-    updateBanner();
-    updateProgress();
     banner.className = 'error-banner';
     banner.style = '';
   }, 3000);
+}
+
+// Submit
+document.addEventListener('submit', e => {
+  if (e.target.id !== 'theForm') return;
+  
+  console.log('🚀 Form submission triggered');
+  e.preventDefault();
+  Object.keys(fields).forEach(k => validate(k));
+  updateBanner();
+  
+  const allOk = Object.keys(fields).every(k => state[k] === true);
+  const intStatusEl = document.getElementById('interviewStatus');
+  const intVal = intStatusEl ? intStatusEl.value : '';
+  
+  console.log('Validation state:', { allOk, intVal, state });
+  
+  if (!allOk || intVal === 'Rejected') {
+    console.log('❌ Submission blocked - validation failed');
+    return; // Don't submit if validation fails
+  }
+  
+  console.log('✅ Validation passed, showing confirmation modal');
+  
+  // Show confirmation modal instead of direct submission
+  showConfirmationModal();
 });

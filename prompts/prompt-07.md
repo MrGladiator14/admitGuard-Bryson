@@ -1,0 +1,7 @@
+- Add a confirmation modal before submission showing a summary of all entered data
+- update the colors to use light shades in `@styles.css`
+- implement a night mode toggle next to application form, audit trail buttons
+- give the ability to the user to update the flagged status in the audit log
+- update my css file to make the website look aesthetic, especiallyin dark mode and on selection:
+- symmetrically place the flag and unflag button
+- ake sure than on submit all form fields are reset and all boxes are closed in `@index.html`
