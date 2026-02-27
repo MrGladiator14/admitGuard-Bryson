@@ -2,7 +2,7 @@
   "rules": [
     {
       "field": "fullName",
-      "label": "Full Names ",
+      "label": "Full Name",
       "inputType": "text",
       "type": "strict",
       "validation": "^[a-zA-Z\\s]{2,}$",
