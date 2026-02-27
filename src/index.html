@@ -9,33 +9,83 @@
 <body>
 <div class="wrap">
   <header>
+    <div class="tab-nav">
+      <button class="tab-btn active" data-tab="form">Application Form</button>
+      <button class="tab-btn" data-tab="audit">Audit Trail</button>
+    </div>
     <h1>Admission Form</h1>
     <p>Complete your application for enrollment consideration</p>
     <div class="progress-bar"><div class="progress-fill" id="pfill"></div></div>
   </header>
-  <div class="progress-label">
-    <span id="ppct">0% complete</span>
-    <span id="pcnt">0 / 11 fields</span>
+  <div class="tab-content">
+    <div class="tab-pane active" id="form-tab">
+      <div class="progress-label">
+        <span id="ppct">0% complete</span>
+        <span id="pcnt">0 / 4 fields</span>
+      </div>
+
+      <div class="error-banner" id="errBanner">
+        <h4>Please fix the following:</h4>
+        <ul class="error-list" id="errList"></ul>
+      </div>
+
+      <div class="warning-banner" id="warningBanner">
+        <span class="warning-icon">⚠️</span>
+        <span class="warning-text">This candidate has more than 2 exceptions. Entry will be flagged for manager review.</span>
+      </div>
+
+      <form id="theForm" class="form-body" novalidate>
+        <!-- Form fields will be dynamically generated from configuration -->
+      </form>
+
+      <footer>
+        <div class="exception-counter" id="exceptionCounter">Active Exceptions: 0/4</div>
+        <button type="submit" form="theForm" class="submit-btn" id="submitBtn" disabled>Submit Application</button>
+      </footer>
+    </div>
+
+    <div class="tab-pane" id="audit-tab">
+      <div class="audit-header">
+        <h2>Audit Trail</h2>
+        <div class="audit-actions">
+          <button class="sync-btn" id="syncBtn">Sync from File</button>
+          <button class="download-btn" id="downloadBtn">Download JSON</button>
+          <button class="clear-btn" id="clearLogBtn">Clear Log</button>
+        </div>
+      </div>
+      <div class="audit-content">
+        <div class="audit-summary" id="auditSummary">
+          <div class="summary-item">
+            <span class="summary-label">Total Submissions:</span>
+            <span class="summary-value" id="totalSubmissions">0</span>
+          </div>
+          <div class="summary-item">
+            <span class="summary-label">Flagged for Review:</span>
+            <span class="summary-value" id="flaggedCount">0</span>
+          </div>
+        </div>
+        <div class="audit-table-container">
+          <table class="audit-table" id="auditTable">
+            <thead>
+              <tr>
+                <th>Candidate Name</th>
+                <th>Submission Time</th>
+                <th>Exception Count</th>
+                <th>Flagged</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="auditTableBody">
+              <!-- Audit entries will be populated here -->
+            </tbody>
+          </table>
+          <div class="empty-state" id="emptyState">
+            <p>No audit entries found. Once forms are submitted, they will appear here.</p>
+          </div>
+        </div>
+      </div>
+    </div>
   </div>
-
-  <div class="error-banner" id="errBanner">
-    <h4>Please fix the following:</h4>
-    <ul class="error-list" id="errList"></ul>
-  </div>
-
-  <div class="warning-banner" id="warningBanner">
-    <span class="warning-icon">⚠️</span>
-    <span class="warning-text">This candidate has more than 2 exceptions. Entry will be flagged for manager review.</span>
-  </div>
-
-  <form id="theForm" class="form-body" novalidate>
-    <!-- Form fields will be dynamically generated from configuration -->
-  </form>
-
-  <footer>
-    <div class="exception-counter" id="exceptionCounter">Active Exceptions: 0/4</div>
-    <button class="submit-btn" id="submitBtn" disabled>Submit Application</button>
-  </footer>
 </div>
 
 <script src="script.js"></script>

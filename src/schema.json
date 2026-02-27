@@ -11,48 +11,6 @@
       "rationaleKeywords": []
     },
     {
-      "field": "email",
-      "label": "Email Address",
-      "inputType": "email",
-      "type": "strict",
-      "validation": "^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$",
-      "errorMessage": "Valid and unique email format required.",
-      "exceptionAllowed": false,
-      "rationaleKeywords": []
-    },
-    {
-      "field": "phone",
-      "label": "Phone Number",
-      "inputType": "tel",
-      "type": "strict",
-      "validation": "^[6-9]\\d{9}$",
-      "errorMessage": "Must be a 10-digit Indian mobile number starting with 6, 7, 8, or 9.",
-      "exceptionAllowed": false,
-      "rationaleKeywords": []
-    },
-    {
-      "field": "dateOfBirth",
-      "label": "Date of Birth",
-      "inputType": "date",
-      "type": "soft",
-      "validation": "ageRange:18-35",
-      "errorMessage": "Candidate age must be between 18 and 35.",
-      "exceptionAllowed": true,
-      "rationaleKeywords": ["approved by", "special case", "documentation pending", "waiver granted"],
-      "hint": "Age must be between 18 and 35 years."
-    },
-    {
-      "field": "highestQualification",
-      "label": "Highest Qualification",
-      "inputType": "select",
-      "options": ["", "B.Tech", "B.E.", "B.Sc", "BCA", "M.Tech", "M.Sc", "MCA", "MBA"],
-      "type": "strict",
-      "validation": "^(B\\.Tech|B\\.E\\.|B\\.Sc|BCA|M\\.Tech|M\\.Sc|MCA|MBA)$",
-      "errorMessage": "Must be a valid degree from the approved list.",
-      "exceptionAllowed": false,
-      "rationaleKeywords": []
-    },
-    {
       "field": "graduationYear",
       "label": "Graduation Year",
       "inputType": "number",
@@ -86,40 +44,6 @@
       "exceptionAllowed": true,
       "rationaleKeywords": ["approved by", "special case", "documentation pending", "waiver granted"],
       "hint": "Score out of 100. \u226560 = Cleared | 40\u201359 = Waitlisted | <40 = Rejected (requires override)."
-    },
-    {
-      "field": "interviewStatus",
-      "label": "Interview Status",
-      "inputType": "select",
-      "options": ["", "Cleared", "Waitlisted", "Rejected"],
-      "type": "strict",
-      "validation": "^(Cleared|Waitlisted|Rejected)$",
-      "errorMessage": "Status must be Cleared, Waitlisted, or Rejected.",
-      "exceptionAllowed": false,
-      "rationaleKeywords": []
-    },
-    {
-      "field": "aadhaarNumber",
-      "label": "Aadhaar Number",
-      "inputType": "text",
-      "attributes": { "maxlength": "12" },
-      "type": "strict",
-      "validation": "^\\d{12}$",
-      "errorMessage": "Aadhaar must be exactly 12 digits.",
-      "exceptionAllowed": false,
-      "rationaleKeywords": [],
-      "hint": "Enter your 12-digit Aadhaar number."
-    },
-    {
-      "field": "offerLetterSent",
-      "label": "Offer Letter Sent",
-      "inputType": "select",
-      "options": ["", "Yes", "No"],
-      "type": "strict",
-      "validation": "^(Yes|No)$",
-      "errorMessage": "Must select Yes or No.",
-      "exceptionAllowed": false,
-      "rationaleKeywords": []
     }
   ]
 }

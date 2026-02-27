@@ -4,6 +4,330 @@ let fields = {};
 let exc = {};
 let state = {};
 
+// Audit Trail System
+const AUDIT_STORAGE_KEY = 'admitguard_audit_log';
+const AUDIT_JSON_FILE = 'audit_log.json';
+let auditLog = [];
+
+// Tab Navigation System
+function initializeTabNavigation() {
+  const tabButtons = document.querySelectorAll('.tab-btn');
+  const tabPanes = document.querySelectorAll('.tab-pane');
+  
+  tabButtons.forEach(button => {
+    button.addEventListener('click', () => {
+      const targetTab = button.dataset.tab;
+      
+      // Update button states
+      tabButtons.forEach(btn => btn.classList.remove('active'));
+      button.classList.add('active');
+      
+      // Update pane visibility
+      tabPanes.forEach(pane => pane.classList.remove('active'));
+      document.getElementById(`${targetTab}-tab`).classList.add('active');
+      
+      // Load audit data when switching to audit tab
+      if (targetTab === 'audit') {
+        console.log('🔄 Switching to audit tab, reloading data');
+        loadAuditLog();
+        // Force update display after a small delay to ensure DOM is ready
+        setTimeout(() => updateAuditDisplay(), 100);
+      }
+    });
+  });
+}
+
+// Audit Trail Functions
+function generateUniqueId() {
+  return Date.now().toString(36) + Math.random().toString(36).substr(2);
+}
+
+function formatTimestamp(isoString) {
+  const date = new Date(isoString);
+  return date.toLocaleString('en-US', {
+    year: 'numeric',
+    month: 'short',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit'
+  });
+}
+
+function saveAuditLog() {
+  try {
+    // Save to localStorage
+    localStorage.setItem(AUDIT_STORAGE_KEY, JSON.stringify(auditLog, null, 2));
+    console.log('Audit log saved to localStorage');
+    
+    // Don't auto-download file - let user manually download when needed
+    console.log('JSON backup ready - use Download button when needed');
+  } catch (error) {
+    console.error('Failed to save audit log:', error);
+  }
+}
+
+function saveAuditLogToFile() {
+  try {
+    const dataStr = JSON.stringify(auditLog, null, 2);
+    const dataBlob = new Blob([dataStr], { type: 'application/json' });
+    
+    // Create a temporary link to trigger download with timestamp
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(dataBlob);
+    link.download = `audit_log_backup_${new Date().toISOString().split('T')[0]}.json`;
+    link.style.display = 'none';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(link.href);
+    
+    console.log('Audit log backed up to local JSON file');
+    
+    // Show brief notification
+    const syncBtn = document.getElementById('syncBtn');
+    if (syncBtn) {
+      const originalText = syncBtn.textContent;
+      syncBtn.textContent = '✓ Backup Created';
+      syncBtn.style.background = '#e8f0ea';
+      syncBtn.style.color = '#2d5a3d';
+      
+      setTimeout(() => {
+        syncBtn.textContent = originalText;
+        syncBtn.style.background = '';
+        syncBtn.style.color = '';
+      }, 2000);
+    }
+  } catch (error) {
+    console.error('Failed to save audit log to file:', error);
+  }
+}
+
+function downloadAuditLog() {
+  try {
+    const dataStr = JSON.stringify(auditLog, null, 2);
+    const dataBlob = new Blob([dataStr], { type: 'application/json' });
+    const url = URL.createObjectURL(dataBlob);
+    
+    // Create download link and trigger download
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `audit_log_${new Date().toISOString().split('T')[0]}.json`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+    
+    console.log('Audit log downloaded as JSON file');
+    
+    // Show brief feedback
+    const downloadBtn = document.getElementById('downloadBtn');
+    if (downloadBtn) {
+      const originalText = downloadBtn.textContent;
+      downloadBtn.textContent = '✓ Downloaded';
+      downloadBtn.style.background = '#e8f0ea';
+      downloadBtn.style.color = '#2d5a3d';
+      
+      setTimeout(() => {
+        downloadBtn.textContent = originalText;
+        downloadBtn.style.background = '';
+        downloadBtn.style.color = '';
+      }, 2000);
+    }
+  } catch (error) {
+    console.error('Failed to download audit log:', error);
+  }
+}
+
+function loadAuditLog() {
+  try {
+    const stored = localStorage.getItem(AUDIT_STORAGE_KEY);
+    auditLog = stored ? JSON.parse(stored) : [];
+    console.log('Loaded', auditLog.length, 'audit entries from localStorage');
+  } catch (error) {
+    console.error('Failed to load audit log:', error);
+    auditLog = [];
+  }
+  updateAuditDisplay();
+}
+
+function syncAuditLogFromFile() {
+  try {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = '.json';
+    
+    input.onchange = (event) => {
+      const file = event.target.files[0];
+      if (!file) return;
+      
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        try {
+          const fileData = JSON.parse(e.target.result);
+          
+          // Validate that it's audit data
+          if (Array.isArray(fileData)) {
+            // Merge with existing data, avoiding duplicates
+            const existingIds = new Set(auditLog.map(entry => entry.id));
+            const newEntries = fileData.filter(entry => !existingIds.has(entry.id));
+            
+            if (newEntries.length > 0) {
+              auditLog = [...newEntries, ...auditLog]; // New entries first
+              saveAuditLog();
+              updateAuditDisplay();
+              console.log(`Synced ${newEntries.length} new entries from file`);
+            } else {
+              console.log('No new entries to sync from file');
+            }
+          } else {
+            console.error('Invalid audit log file format');
+          }
+        } catch (parseError) {
+          console.error('Failed to parse audit log file:', parseError);
+        }
+      };
+      reader.readAsText(file);
+    };
+    
+    input.click();
+  } catch (error) {
+    console.error('Failed to sync audit log from file:', error);
+  }
+}
+
+function addAuditEntry(formData) {
+  const entry = {
+    id: generateUniqueId(),
+    timestamp: new Date().toISOString(),
+    payload: { ...formData },
+    exceptionCount: Object.keys(formData.exceptions || {}).length,
+    exceptionFields: Object.keys(formData.exceptions || {}),
+    flaggedForManager: formData.flagged || false
+  };
+  
+  auditLog.unshift(entry); // Add to beginning for reverse chronological order
+  saveAuditLog();
+  updateAuditDisplay();
+  
+  console.log('Audit entry added:', entry.id);
+}
+
+function updateAuditDisplay() {
+  const tbody = document.getElementById('auditTableBody');
+  const emptyState = document.getElementById('emptyState');
+  const totalSubmissions = document.getElementById('totalSubmissions');
+  const flaggedCount = document.getElementById('flaggedCount');
+  
+  console.log('🔄 Updating audit display, entries:', auditLog.length);
+  
+  // Check if audit tab elements exist
+  if (!tbody || !emptyState || !totalSubmissions || !flaggedCount) {
+    console.log('⚠️ Audit display elements not found (audit tab not loaded yet)');
+    return;
+  }
+  
+  // Update summary
+  totalSubmissions.textContent = auditLog.length;
+  flaggedCount.textContent = auditLog.filter(entry => entry.flaggedForManager).length;
+  
+  // Clear existing table content
+  tbody.innerHTML = '';
+  
+  if (auditLog.length === 0) {
+    emptyState.style.display = 'block';
+    return;
+  }
+  
+  emptyState.style.display = 'none';
+  
+  // Populate table
+  auditLog.forEach(entry => {
+    const row = document.createElement('tr');
+    row.innerHTML = `
+      <td>${entry.payload.fullName || 'N/A'}</td>
+      <td>${formatTimestamp(entry.timestamp)}</td>
+      <td>${entry.exceptionCount}</td>
+      <td>
+        <span class="flag-badge ${entry.flaggedForManager ? 'yes' : 'no'}">
+          ${entry.flaggedForManager ? 'Yes' : 'No'}
+        </span>
+      </td>
+      <td>
+        <button class="action-btn" onclick="toggleAuditDetail('${entry.id}')">
+          View Details
+        </button>
+      </td>
+    `;
+    tbody.appendChild(row);
+    
+    // Add detail row
+    const detailRow = createDetailRow(entry);
+    tbody.appendChild(detailRow);
+  });
+  
+  console.log('✅ Audit display updated successfully');
+}
+
+function createDetailRow(entry) {
+  const row = document.createElement('tr');
+  row.className = 'audit-detail';
+  row.id = `detail-${entry.id}`;
+  
+  let exceptionsHtml = '';
+  if (entry.exceptionFields.length > 0) {
+    exceptionsHtml = `
+      <div class="detail-section">
+        <div class="detail-title">Exceptions (${entry.exceptionCount})</div>
+        <ul class="exception-list">
+          ${entry.exceptionFields.map(field => `
+            <li>
+              <div class="exception-field">${field}</div>
+              <div class="exception-rationale">${entry.payload.exceptions[field]?.rationale || 'No rationale provided'}</div>
+            </li>
+          `).join('')}
+        </ul>
+      </div>
+    `;
+  }
+  
+  row.innerHTML = `
+    <td colspan="5">
+      <div class="detail-section">
+        <div class="detail-title">Submission Details</div>
+        <div class="detail-content">
+          <strong>Candidate:</strong> ${entry.payload.fullName || 'N/A'}<br>
+          ${entry.payload.email ? `<strong>Email:</strong> ${entry.payload.email}<br>` : ''}
+          ${entry.payload.phone ? `<strong>Phone:</strong> ${entry.payload.phone}<br>` : ''}
+          ${entry.payload.interviewStatus ? `<strong>Interview Status:</strong> ${entry.payload.interviewStatus}<br>` : ''}
+          <strong>Flagged for Review:</strong> ${entry.flaggedForManager ? 'Yes' : 'No'}
+        </div>
+      </div>
+      ${exceptionsHtml}
+      <div class="detail-section">
+        <div class="detail-title">Complete Submission Data</div>
+        <div class="json-view">${JSON.stringify(entry.payload, null, 2)}</div>
+      </div>
+    </td>
+  `;
+  
+  return row;
+}
+
+function toggleAuditDetail(entryId) {
+  const detailRow = document.getElementById(`detail-${entryId}`);
+  if (detailRow) {
+    detailRow.classList.toggle('show');
+  }
+}
+
+function clearAuditLog() {
+  if (confirm('Are you sure you want to clear all audit entries? This action cannot be undone.')) {
+    auditLog = [];
+    saveAuditLog();
+    updateAuditDisplay();
+  }
+}
+
 // Load configuration and initialize validation system
 async function loadValidationConfig() {
   try {
@@ -49,7 +373,8 @@ function generateFormFromConfig() {
       emptyOption.value = '';
       emptyOption.textContent = rule.field === 'highestQualification' ? 'Select qualification' : 
                                rule.field === 'interviewStatus' ? 'Select status' : 
-                               rule.field === 'offerLetterSent' ? 'Select option' : '';
+                               rule.field === 'offerLetterSent' ? 'Select option' : 
+                               rule.field === 'screeningScore' ? 'Enter score' : '';
       input.appendChild(emptyOption);
       
       // Add options from config
@@ -99,27 +424,11 @@ function generateFormFromConfig() {
       exceptionPanel.className = 'exception-panel';
       exceptionPanel.id = rule.field + 'Exc';
       
-      // Exception checkbox
-      const excCheck = document.createElement('div');
-      excCheck.className = 'exc-check';
-      
-      const excCheckbox = document.createElement('input');
-      excCheckbox.type = 'checkbox';
-      excCheckbox.id = rule.field + 'ExcToggle';
-      
-      const excLabel = document.createElement('label');
-      excLabel.setAttribute('for', rule.field + 'ExcToggle');
-      excLabel.textContent = 'Request Exception';
-      
-      excCheck.appendChild(excCheckbox);
-      excCheck.appendChild(excLabel);
-      exceptionPanel.appendChild(excCheck);
-      
-      // Exception rationale textarea
+      // Exception rationale textarea (always visible)
       const excTextarea = document.createElement('textarea');
       excTextarea.className = 'exc-ta';
       excTextarea.id = rule.field + 'Rationale';
-      excTextarea.placeholder = 'Provide justification...';
+      excTextarea.placeholder = 'Provide justification for exception...';
       exceptionPanel.appendChild(excTextarea);
       
       // Exception help text
@@ -189,6 +498,10 @@ function initializeValidationSystem() {
   
   // Initialize state
   Object.keys(fields).forEach(key => state[key] = false);
+  
+  // Debug logging
+  console.log('Validation system initialized with', Object.keys(fields).length, 'fields');
+  console.log('Exception fields:', Object.keys(exc));
 }
 
 function age(dob) {
@@ -264,7 +577,7 @@ function validateOffer(v) {
 function countActiveExceptions() {
   return Object.keys(exc).filter(key => {
     const e = exc[key];
-    return e && e.on && checkRationale(e.text, key) === '';
+    return e && e.text.trim().length > 0 && checkRationale(e.text, key) === '';
   }).length;
 }
 
@@ -330,11 +643,17 @@ function validate(key) {
   if (!ok && !f.strict && f.hasException) {
     if (excPanel) excPanel.classList.add('show');
     const e = exc[key];
-    if (e && e.on) {
+    if (e && e.text.trim().length > 0) {
       const err = checkRationale(e.text, key);
       if (!err) {
+        // Exception is approved but still remains an exception
         ok = true;
+        el.classList.add('warn'); // Keep warning state to show it's an exception
+        hintEl.className = 'hint warn';
+        hintEl.textContent = f.msg + ' (exception approved)';
         if (excRatEl) { excRatEl.className = 'exc-hint hint ok'; excRatEl.textContent = '✓ Exception approved'; }
+        state[key] = true;
+        return true;
       } else {
         if (excRatEl) { excRatEl.className = 'exc-hint hint err'; excRatEl.textContent = err; }
       }
@@ -370,7 +689,8 @@ function validate(key) {
 function updateBanner() {
   const banner = document.getElementById('errBanner');
   const list = document.getElementById('errList');
-  const intVal = document.getElementById('interviewStatus').value;
+  const intStatusEl = document.getElementById('interviewStatus');
+  const intVal = intStatusEl ? intStatusEl.value : '';
 
   // Update exception counter and warning banner
   const exceptionCount = updateExceptionCounter();
@@ -382,17 +702,47 @@ function updateBanner() {
     return;
   }
 
-  const errors = Object.keys(fields).filter(k => state[k] === false).map(k => fields[k].msg);
-  if (errors.length) {
+  // Check for fields that need attention (either invalid or missing exception rationale)
+  const blockingFields = Object.keys(fields).filter(k => {
+    const f = fields[k];
+    const el = document.getElementById(f.el);
+    const v = el.value.trim();
+    
+    // Field is empty and required
+    if (!v) return true;
+    
+    // Field is invalid and doesn't have an approved exception
+    let ok = f.re ? f.re.test(v) : (f.fn ? f.fn(v) : true);
+    if (!ok && !f.strict && f.hasException) {
+      const e = exc[k];
+      if (e && e.text.trim().length > 0) {
+        const err = checkRationale(e.text, k);
+        return err !== ''; // Blocking if exception rationale is invalid
+      }
+      return true; // Blocking if no exception provided yet
+    }
+    return !ok; // Blocking if invalid and no exception allowed
+  });
+
+  if (blockingFields.length) {
     banner.className = 'error-banner show';
-    list.innerHTML = errors.map(e => `<li>${e}</li>`).join('');
+    list.innerHTML = blockingFields.map(k => {
+      const fieldConfig = validationConfig.rules.find(rule => rule.field === k);
+      const label = fieldConfig ? fieldConfig.label : k.replace(/([A-Z])/g,' $1').trim();
+      return `<li>${label} needs attention</li>`;
+    }).join('');
   } else {
     banner.className = 'error-banner';
   }
 
-  const allOk = Object.keys(fields).every(k => state[k] === true);
-  // Never disable submit button based on exception count - only validation status
-  document.getElementById('submitBtn').disabled = !allOk || intVal === 'Rejected';
+  // Enable submit if no fields need attention (regardless of exception count)
+  const shouldDisable = blockingFields.length > 0 || intVal === 'Rejected';
+  document.getElementById('submitBtn').disabled = shouldDisable;
+  
+  // Debug logging
+  console.log('Blocking fields:', blockingFields);
+  console.log('Exception count:', exceptionCount);
+  console.log('Should disable submit:', shouldDisable);
   
   // Store exception count for submission handling
   window.currentExceptionCount = exceptionCount;
@@ -425,21 +775,17 @@ function bindFieldEvents() {
     }
   });
 
-  // Exception toggles & rationales - bind dynamically
+  // Exception rationales - bind dynamically
   Object.keys(exc).forEach(key => {
-    const toggle = document.getElementById(key + 'ExcToggle');
     const ratEl  = document.getElementById(key + 'Rationale');
-    if (toggle) {
-      toggle.addEventListener('change', () => { 
-        exc[key].on = toggle.checked; 
-        validate(key); 
-        updateBanner(); 
-        updateExceptionCounter(); 
-      });
-    }
     if (ratEl) {
+      // Update counter in real-time while typing
       ratEl.addEventListener('input', () => { 
         exc[key].text = ratEl.value; 
+        updateExceptionCounter(); 
+      });
+      // Validate only when user finishes typing
+      ratEl.addEventListener('blur', () => { 
         validate(key); 
         updateBanner(); 
         updateExceptionCounter(); 
@@ -453,6 +799,27 @@ document.addEventListener('DOMContentLoaded', async () => {
   await loadValidationConfig();
   generateFormFromConfig();
   bindFieldEvents();
+  
+  // Initialize tab navigation
+  initializeTabNavigation();
+  
+  // Initialize audit log clear button
+  const clearBtn = document.getElementById('clearLogBtn');
+  if (clearBtn) {
+    clearBtn.addEventListener('click', clearAuditLog);
+  }
+  
+  // Initialize audit log download button
+  const downloadBtn = document.getElementById('downloadBtn');
+  if (downloadBtn) {
+    downloadBtn.addEventListener('click', downloadAuditLog);
+  }
+  
+  // Initialize audit log sync button
+  const syncBtn = document.getElementById('syncBtn');
+  if (syncBtn) {
+    syncBtn.addEventListener('click', syncAuditLogFromFile);
+  }
   
   // Mode toggle (percentage vs CGPA)
   const modeToggle = document.getElementById('modeToggle');
@@ -470,7 +837,10 @@ document.addEventListener('DOMContentLoaded', async () => {
   const intStatus = document.getElementById('interviewStatus');
   if (intStatus) {
     intStatus.addEventListener('change', () => { 
-      validate('offerLetterSent'); 
+      // Only validate offerLetterSent if it exists in the current schema
+      if (fields['offerLetterSent']) {
+        validate('offerLetterSent'); 
+      }
       updateBanner(); 
     });
   }
@@ -484,16 +854,23 @@ document.addEventListener('DOMContentLoaded', async () => {
 document.addEventListener('submit', e => {
   if (e.target.id !== 'theForm') return;
   
+  console.log('🚀 Form submission triggered');
   e.preventDefault();
   Object.keys(fields).forEach(k => validate(k));
   updateBanner();
   
   const allOk = Object.keys(fields).every(k => state[k] === true);
-  const intVal = document.getElementById('interviewStatus').value;
+  const intStatusEl = document.getElementById('interviewStatus');
+  const intVal = intStatusEl ? intStatusEl.value : '';
+  
+  console.log('Validation state:', { allOk, intVal, state });
   
   if (!allOk || intVal === 'Rejected') {
+    console.log('❌ Submission blocked - validation failed');
     return; // Don't submit if validation fails
   }
+  
+  console.log('✅ Validation passed, proceeding with submission');
   
   // Prepare submission data using configuration
   const formData = {};
@@ -507,13 +884,15 @@ document.addEventListener('submit', e => {
   // Add exception data
   formData.exceptions = {};
   Object.keys(exc).forEach(key => {
-    if (exc[key].on) {
+    if (exc[key] && exc[key].text && exc[key].text.trim().length > 0) {
       formData.exceptions[key] = {
-        active: exc[key].on,
-        rationale: exc[key].text
+        active: true,
+        rationale: exc[key].text.trim()
       };
     }
   });
+  
+  console.log('Exception data collected:', formData.exceptions);
   
   // Flag record if more than 2 exceptions
   const exceptionCount = countActiveExceptions();
@@ -527,6 +906,25 @@ document.addEventListener('submit', e => {
   
   // Simulate submission (in real app, this would be an API call)
   console.log('Submitting form data:', formData);
+  
+  // Add to audit log before showing success message
+  addAuditEntry(formData);
+  
+  // Show audit trail notification
+  setTimeout(() => {
+    const auditTab = document.querySelector('[data-tab="audit"]');
+    if (auditTab) {
+      auditTab.style.background = '#e8f0ea';
+      auditTab.style.color = '#2d5a3d';
+      auditTab.textContent = 'Audit Trail (New Entry!)';
+      
+      setTimeout(() => {
+        auditTab.style.background = '';
+        auditTab.style.color = '';
+        auditTab.textContent = 'Audit Trail';
+      }, 3000);
+    }
+  }, 1000);
   
   // Show success message
   const banner = document.getElementById('errBanner');
@@ -546,7 +944,7 @@ document.addEventListener('submit', e => {
   setTimeout(() => {
     document.getElementById('theForm').reset();
     Object.keys(exc).forEach(key => {
-      exc[key] = { on: false, text: '' };
+      exc[key] = { text: '' };
     });
     Object.keys(state).forEach(key => state[key] = false);
     updateBanner();
