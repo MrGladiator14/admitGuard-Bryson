@@ -162,6 +162,66 @@
             color: #28a745;
         }
 
+        .error-banner {
+            background: #f8d7da;
+            border: 1px solid #f5c6cb;
+            color: #721c24;
+            padding: 15px 20px;
+            margin: 20px 30px 0;
+            border-radius: 8px;
+            display: none;
+            font-weight: 500;
+        }
+
+        .error-banner.show {
+            display: block;
+        }
+
+        .error-banner.blocking {
+            background: #dc3545;
+            color: white;
+            border-color: #dc3545;
+            font-weight: 600;
+        }
+
+        .error-summary {
+            margin-bottom: 10px;
+        }
+
+        .error-summary h4 {
+            margin-bottom: 8px;
+            font-size: 0.9rem;
+        }
+
+        .error-list {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+
+        .error-list li {
+            padding: 4px 0;
+            font-size: 0.85rem;
+            display: flex;
+            align-items: flex-start;
+        }
+
+        .error-list li::before {
+            content: "•";
+            margin-right: 8px;
+            font-weight: bold;
+        }
+
+        .exception-input {
+            margin-top: 8px;
+            padding: 8px 12px;
+            border: 1px solid #ffc107;
+            border-radius: 4px;
+            font-size: 0.85rem;
+            width: 100%;
+            background: #fff3cd;
+        }
+
         .toggle-container {
             display: flex;
             align-items: center;
@@ -303,6 +363,13 @@
             </div>
         </div>
 
+        <div class="error-banner" id="errorBanner">
+            <div class="error-summary">
+                <h4>Please fix the following issues:</h4>
+                <ul class="error-list" id="errorList"></ul>
+            </div>
+        </div>
+
         <div class="form-container">
             <form id="admissionForm" class="form-grid">
                 <!-- Personal Information Section -->
@@ -416,15 +483,122 @@
     </div>
 
     <script>
+        // Validation rules configuration
+        const validationRules = {
+            fullName: {
+                field: 'fullName',
+                label: 'Full Name',
+                type: 'strict',
+                validation: /^[a-zA-Z\s]{2,}$/,
+                errorMessage: 'Name must be at least 2 characters with no numbers.',
+                exceptionAllowed: false
+            },
+            email: {
+                field: 'email',
+                label: 'Email Address',
+                type: 'strict',
+                validation: /^[^\s@]+@[^\s@]+\.[^\s@]+$/,
+                errorMessage: 'Valid and unique email format required.',
+                exceptionAllowed: false
+            },
+            phone: {
+                field: 'phone',
+                label: 'Phone Number',
+                type: 'strict',
+                validation: /^[6-9]\d{9}$/,
+                errorMessage: 'Must be a 10-digit Indian mobile number starting with 6, 7, 8, or 9.',
+                exceptionAllowed: false
+            },
+            dateOfBirth: {
+                field: 'dateOfBirth',
+                label: 'Date of Birth',
+                type: 'soft',
+                validation: 'ageRange:18-35',
+                errorMessage: 'Candidate age must be between 18 and 35.',
+                exceptionAllowed: true,
+                rationaleKeywords: ['approved by', 'special case', 'documentation pending', 'waiver granted'],
+                hint: 'Age must be between 18 and 35 years.'
+            },
+            highestQualification: {
+                field: 'highestQualification',
+                label: 'Highest Qualification',
+                type: 'strict',
+                validation: /^(B\.Tech|B\.E\.|B\.Sc|BCA|M\.Tech|M\.Sc|MCA|MBA)$/,
+                errorMessage: 'Must be a valid degree from the approved list.',
+                exceptionAllowed: false
+            },
+            graduationYear: {
+                field: 'graduationYear',
+                label: 'Graduation Year',
+                type: 'soft',
+                validation: /^(201[5-9]|202[0-5])$/,
+                errorMessage: 'Graduation year must be between 2015 and 2025 (inclusive).',
+                exceptionAllowed: true,
+                rationaleKeywords: ['approved by', 'special case', 'documentation pending', 'waiver granted'],
+                hint: 'Accepted range: 2015 to 2025.'
+            },
+            percentageCgpa: {
+                field: 'percentageCgpa',
+                label: 'Percentage / CGPA',
+                type: 'soft',
+                validation: 'minPercentage:60,minCGPA:6.0',
+                errorMessage: 'Minimum 60% or 6.0 CGPA (10-point scale) required.',
+                exceptionAllowed: true,
+                rationaleKeywords: ['approved by', 'special case', 'documentation pending', 'waiver granted'],
+                hint: 'Enter percentage (e.g. 72.5) or CGPA (e.g. 7.8). Values ≥10 are treated as percentage; values <10 as CGPA.'
+            },
+            screeningScore: {
+                field: 'screeningScore',
+                label: 'Screening Test Score',
+                type: 'soft',
+                validation: 'screeningScore',
+                errorMessage: 'Screening score must be 40 or higher out of 100.',
+                exceptionAllowed: true,
+                rationaleKeywords: ['approved by', 'special case', 'documentation pending', 'waiver granted'],
+                hint: 'Score out of 100. ≥60 = Cleared | 40–59 = Waitlisted | <40 = Rejected (requires override).'
+            },
+            interviewStatus: {
+                field: 'interviewStatus',
+                label: 'Interview Status',
+                type: 'strict',
+                validation: /^(Cleared|Waitlisted|Rejected)$/,
+                errorMessage: 'Status must be Cleared, Waitlisted, or Rejected.',
+                exceptionAllowed: false
+            },
+            aadhaarNumber: {
+                field: 'aadhaarNumber',
+                label: 'Aadhaar Number',
+                type: 'strict',
+                validation: /^\d{12}$/,
+                errorMessage: 'Aadhaar must be exactly 12 digits.',
+                exceptionAllowed: false,
+                hint: 'Enter your 12-digit Aadhaar number.'
+            },
+            offerLetterSent: {
+                field: 'offerLetterSent',
+                label: 'Offer Letter Sent',
+                type: 'strict',
+                validation: /^(Yes|No)$/,
+                errorMessage: 'Must select Yes or No.',
+                exceptionAllowed: false
+            }
+        };
+
         // Form elements
         const form = document.getElementById('admissionForm');
         const submitBtn = document.getElementById('submitBtn');
         const progressFill = document.getElementById('progressFill');
         const progressPercent = document.getElementById('progressPercent');
         const completedFields = document.getElementById('completedFields');
+        const errorBanner = document.getElementById('errorBanner');
+        const errorList = document.getElementById('errorList');
         const percentageToggle = document.getElementById('percentageToggle');
         const toggleLabel = document.getElementById('toggleLabel');
         const percentageCgpa = document.getElementById('percentageCgpa');
+
+        // State management
+        let validationState = {};
+        let exceptionRationales = {};
 
         // Toggle functionality for Percentage/CGPA
         let isPercentageMode = true;
@@ -434,18 +608,203 @@
             this.classList.toggle('active');
             toggleLabel.textContent = isPercentageMode ? 'Percentage (%)' : 'CGPA (10-point)';
             percentageCgpa.placeholder = isPercentageMode ? '72.5' : '7.8';
+            validateField('percentageCgpa');
         });
 
-        // Track field completion for progress
-        const fields = [
-            'fullName', 'email', 'phone', 'dateOfBirth',
-            'highestQualification', 'graduationYear', 'percentageCgpa',
-            'screeningScore', 'interviewStatus', 'aadhaarNumber', 'offerLetterSent'
-        ];
+        // Age calculation helper
+        function calculateAge(dob) {
+            const today = new Date();
+            const birthDate = new Date(dob);
+            let age = today.getFullYear() - birthDate.getFullYear();
+            const monthDiff = today.getMonth() - birthDate.getMonth();
+            if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+                age--;
+            }
+            return age;
+        }
 
-        // Update progress bar
+        // Validation functions
+        function validateField(fieldName) {
+            const field = document.getElementById(fieldName);
+            const errorElement = document.getElementById(fieldName + 'Error');
+            const rule = validationRules[fieldName];
+            
+            if (!field || !rule) return true;
+
+            const value = field.value.trim();
+            let isValid = true;
+            let errorMessage = '';
+            let isWarning = false;
+
+            // Check if field is empty
+            if (!value) {
+                isValid = false;
+                errorMessage = `${rule.label} is required.`;
+            } else {
+                // Apply validation based on rule type
+                if (rule.validation instanceof RegExp) {
+                    isValid = rule.validation.test(value);
+                    if (!isValid) {
+                        errorMessage = rule.errorMessage;
+                    }
+                } else if (typeof rule.validation === 'string') {
+                    // Handle special validation types
+                    if (rule.validation === 'ageRange:18-35') {
+                        const age = calculateAge(value);
+                        isValid = age >= 18 && age <= 35;
+                        if (!isValid) {
+                            errorMessage = rule.errorMessage;
+                            isWarning = true;
+                        }
+                    } else if (rule.validation === 'screeningScore') {
+                        const score = parseFloat(value);
+                        isValid = score >= 40 && score <= 100;
+                        if (!isValid) {
+                            errorMessage = rule.errorMessage;
+                            isWarning = true;
+                        }
+                    } else if (rule.validation.includes('minPercentage') || rule.validation.includes('minCGPA')) {
+                        const numValue = parseFloat(value);
+                        if (isNaN(numValue)) {
+                            isValid = false;
+                            errorMessage = 'Please enter a valid number.';
+                        } else {
+                            // Determine if it's percentage or CGPA based on value
+                            const isPercentage = numValue >= 10;
+                            let isValidValue = false;
+                            
+                            if (isPercentage) {
+                                isValidValue = numValue >= 60;
+                            } else {
+                                isValidValue = numValue >= 6.0;
+                            }
+                            
+                            isValid = isValidValue;
+                            if (!isValid) {
+                                errorMessage = rule.errorMessage;
+                                isWarning = true;
+                            }
+                        }
+                    }
+                }
+            }
+
+            // Check for exception rationale for soft rules
+            if (!isValid && isWarning && rule.exceptionAllowed) {
+                const rationale = exceptionRationales[fieldName] || '';
+                const hasValidRationale = rule.rationaleKeywords.some(keyword => 
+                    rationale.toLowerCase().includes(keyword.toLowerCase())
+                );
+                
+                if (hasValidRationale) {
+                    isValid = true;
+                    errorMessage = '';
+                    isWarning = false;
+                }
+            }
+
+            // Special validation for offer letter sent
+            if (fieldName === 'offerLetterSent' && value === 'Yes') {
+                const interviewStatus = document.getElementById('interviewStatus').value;
+                if (interviewStatus !== 'Cleared' && interviewStatus !== 'Waitlisted') {
+                    isValid = false;
+                    errorMessage = 'Offer letter can only be sent to cleared or waitlisted candidates.';
+                }
+            }
+
+            // Update UI
+            updateFieldValidation(field, errorElement, isValid, errorMessage, isWarning);
+            validationState[fieldName] = { isValid, isWarning, errorMessage };
+
+            return isValid;
+        }
+
+        function updateFieldValidation(field, errorElement, isValid, errorMessage, isWarning) {
+            // Clear previous states
+            field.classList.remove('error', 'warning');
+            errorElement.classList.remove('error', 'warning', 'success');
+
+            if (!isValid) {
+                if (isWarning) {
+                    field.classList.add('warning');
+                    errorElement.classList.add('warning');
+                    errorElement.textContent = errorMessage + ' (Add exception rationale if needed)';
+                } else {
+                    field.classList.add('error');
+                    errorElement.classList.add('error');
+                    errorElement.textContent = errorMessage;
+                }
+            } else if (field.value.trim()) {
+                errorElement.classList.add('success');
+                errorElement.textContent = '✓ Valid';
+            } else {
+                errorElement.textContent = '';
+            }
+        }
+
+        function updateErrorBanner() {
+            const interviewStatus = document.getElementById('interviewStatus').value;
+            
+            // Check for rejected candidate blocking condition
+            if (interviewStatus === 'Rejected') {
+                errorBanner.classList.add('show', 'blocking');
+                errorList.innerHTML = '<li>Rejected candidates cannot be enrolled.</li>';
+                submitBtn.disabled = true;
+                return;
+            }
+
+            // Collect all validation errors
+            const errors = [];
+            Object.keys(validationState).forEach(fieldName => {
+                const state = validationState[fieldName];
+                if (!state.isValid && state.errorMessage) {
+                    errors.push(state.errorMessage);
+                }
+            });
+
+            if (errors.length > 0) {
+                errorBanner.classList.add('show');
+                errorBanner.classList.remove('blocking');
+                errorList.innerHTML = errors.map(error => `<li>${error}</li>`).join('');
+            } else {
+                errorBanner.classList.remove('show', 'blocking');
+            }
+
+            // Update submit button state
+            updateSubmitButtonState();
+        }
+
+        function updateSubmitButtonState() {
+            const interviewStatus = document.getElementById('interviewStatus').value;
+            
+            // Block if rejected
+            if (interviewStatus === 'Rejected') {
+                submitBtn.disabled = true;
+                return;
+            }
+
+            // Check all strict validations
+            let allStrictValid = true;
+            Object.keys(validationRules).forEach(fieldName => {
+                const rule = validationRules[fieldName];
+                const state = validationState[fieldName];
+                
+                if (rule.type === 'strict' && (!state || !state.isValid)) {
+                    allStrictValid = false;
+                }
+            });
+
+            submitBtn.disabled = !allStrictValid;
+        }
+
         function updateProgress() {
             let filled = 0;
+            const fields = [
+                'fullName', 'email', 'phone', 'dateOfBirth',
+                'highestQualification', 'graduationYear', 'percentageCgpa',
+                'screeningScore', 'interviewStatus', 'aadhaarNumber', 'offerLetterSent'
+            ];
+            
             fields.forEach(fieldId => {
                 const field = document.getElementById(fieldId);
                 if (field && field.value.trim() !== '') {
@@ -459,25 +818,62 @@
             completedFields.textContent = filled;
         }
 
-        // Add input listeners for progress tracking
-        fields.forEach(fieldId => {
-            const field = document.getElementById(fieldId);
+        // Add event listeners for real-time validation
+        Object.keys(validationRules).forEach(fieldName => {
+            const field = document.getElementById(fieldName);
             if (field) {
-                field.addEventListener('input', updateProgress);
-                field.addEventListener('change', updateProgress);
+                // Validate on input
+                field.addEventListener('input', () => {
+                    validateField(fieldName);
+                    updateErrorBanner();
+                    updateProgress();
+                });
+
+                // Validate on change (for dropdowns)
+                field.addEventListener('change', () => {
+                    validateField(fieldName);
+                    updateErrorBanner();
+                    updateProgress();
+                });
+
+                // Validate on blur
+                field.addEventListener('blur', () => {
+                    validateField(fieldName);
+                    updateErrorBanner();
+                });
             }
         });
 
-        // Basic form submission prevention
+        // Form submission prevention
         form.addEventListener('submit', function(e) {
             e.preventDefault();
             
-            // This will be implemented in the next phase
-            console.log('Form submitted - validation and submission logic to be implemented');
+            // Validate all fields before submission
+            let allValid = true;
+            Object.keys(validationRules).forEach(fieldName => {
+                if (!validateField(fieldName)) {
+                    allValid = false;
+                }
+            });
+            
+            updateErrorBanner();
+            
+            if (allValid && !submitBtn.disabled) {
+                console.log('Form submitted successfully - data processing to be implemented');
+                // Here you would normally submit the form data
+            } else {
+                console.log('Form submission blocked due to validation errors');
+            }
         });
 
-        // Initialize progress on load
-        updateProgress();
+        // Initialize validation on load
+        document.addEventListener('DOMContentLoaded', function() {
+            Object.keys(validationRules).forEach(fieldName => {
+                validateField(fieldName);
+            });
+            updateErrorBanner();
+            updateProgress();
+        });
     </script>
 </body>
 </html>
